@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -26,14 +27,14 @@ public class PortfolioController {
     public ResponseEntity<Portfolio> createPortfolio(
             @RequestBody Portfolio portfolio,
             Authentication authentication) {
-        User user = userService.getUserByEmail(authentication.getName());
+        User user = userService.findByEmail(authentication.getName());
         Portfolio newPortfolio = portfolioService.createPortfolio(user, portfolio.getName());
         return ResponseEntity.ok(newPortfolio);
     }
 
     @GetMapping
     public ResponseEntity<List<Portfolio>> getUserPortfolios(Authentication authentication) {
-        User user = userService.getUserByEmail(authentication.getName());
+        User user = userService.findByEmail(authentication.getName());
         List<Portfolio> portfolios = portfolioService.getUserPortfolios(user);
         return ResponseEntity.ok(portfolios);
     }
@@ -68,9 +69,13 @@ public class PortfolioController {
 
     @GetMapping("/{id}/risk-metrics")
     public ResponseEntity<Portfolio> calculateRiskMetrics(@PathVariable Long id) {
-        Portfolio portfolio = portfolioService.getPortfolioById(id);
-        Portfolio updatedPortfolio = portfolioService.calculateRiskMetrics(portfolio);
-        return ResponseEntity.ok(updatedPortfolio);
+        try {
+            Portfolio portfolio = portfolioService.getPortfolioById(id);
+            Portfolio updatedPortfolio = portfolioService.calculateRiskMetrics(portfolio);
+            return ResponseEntity.ok(updatedPortfolio);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping("/{id}")

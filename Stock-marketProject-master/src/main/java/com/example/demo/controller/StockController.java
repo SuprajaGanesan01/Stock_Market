@@ -4,9 +4,9 @@ import com.example.demo.model.Stock;
 import com.example.demo.service.StockApiService;
 import com.example.demo.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -25,36 +25,63 @@ public class StockController {
     }
 
     @GetMapping
-    public List<Stock> getAllStocks() {
-        return stockService.getAllStocks();
+    public ResponseEntity<List<Stock>> getAllStocks() {
+        try {
+            List<Stock> stocks = stockService.getAllStocks();
+            return ResponseEntity.ok(stocks);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/{id}")
-    public Stock getStockById(@PathVariable int id) {
-        return stockService.getStockById(id);
+    public ResponseEntity<Stock> getStockById(@PathVariable int id) {
+        try {
+            Stock stock = stockService.getStockById(id);
+            if (stock == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(stock);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
 	//http://localhost:9090/api/stocks/create?stock_symbol=
     @PostMapping("/create")
-    public Stock createStock(@RequestParam String stock_symbol) throws IOException {
-        String name = stockAPIService.getStockName(stock_symbol);
-        double price = stockAPIService.getStockPrice(stock_symbol);
+    public ResponseEntity<?> createStock(@RequestParam String stock_symbol) {
+        try {
+            // Validate the stock symbol
+            if (!stockAPIService.isStockValid(stock_symbol)) {
+                return ResponseEntity.badRequest().body("Invalid stock symbol: " + stock_symbol);
+            }
 
-        Stock stock = new Stock();
-        stock.setStockSymbol(stock_symbol);
-        stock.setStock_name(name);
-        stock.setStock_price(price);
-
-        return stockService.saveStock(stock);
+            // Get complete stock data
+            Stock stock = stockAPIService.getStockData(stock_symbol);
+            Stock savedStock = stockService.saveStock(stock);
+            return ResponseEntity.ok(savedStock);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error creating stock: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void deleteStock(@PathVariable int id) {
-        stockService.deleteStock(id);
+    public ResponseEntity<Void> deleteStock(@PathVariable int id) {
+        try {
+            stockService.deleteStock(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/clearAll")
-    public void clearAllStocks() {
-        stockService.clearAllStocks();
+    public ResponseEntity<Void> clearAllStocks() {
+        try {
+            stockService.clearAllStocks();
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
