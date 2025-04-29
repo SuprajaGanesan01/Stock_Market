@@ -1,31 +1,44 @@
 package com.example.demo.service;
-import org.springframework.stereotype.Service;
 
-import com.example.demo.Repository.LearningCardRepository;
 import com.example.demo.model.LearningCard;
+import com.example.demo.Repository.LearningCardRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class LearningCardServiceImpl implements LearningCardService {
 
-    private final LearningCardRepository cardRepo;
+    @Autowired
+    private LearningCardRepository learningCardRepository;
 
-    public LearningCardServiceImpl(LearningCardRepository cardRepo) {
-        this.cardRepo = cardRepo;
+    @Override
+    public LearningCard createCard(LearningCard card) {
+        return learningCardRepository.save(card);
     }
 
     @Override
-    public List<LearningCard> getAllCards() {
-        return cardRepo.findAll();
-    }
-//    public LearningCard saveLearningCard(LearningCard learningCard) {
-//        return cardRepo.save(learningCard);
-//    }
-    
-    public LearningCard getCardById(Long id) {
-        return cardRepo.findById(id).orElse(null);  // Return the card by ID or null if not found
-        
+    public LearningCard getCard(Long id) {
+        return learningCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Learning card not found with id: " + id));
     }
 
+    @Override
+    public List<LearningCard> getCardsByCategory(String category) {
+        return learningCardRepository.findByCategory(category);
+    }
+
+    @Override
+    public void deleteCard(Long id) {
+        learningCardRepository.deleteById(id);
+    }
+
+    @Override
+    public LearningCard updateCard(LearningCard card) {
+        if (!learningCardRepository.existsById(card.getId())) {
+            throw new RuntimeException("Learning card not found with id: " + card.getId());
+        }
+        return learningCardRepository.save(card);
+    }
 }

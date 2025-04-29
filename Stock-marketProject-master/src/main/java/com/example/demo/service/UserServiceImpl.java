@@ -10,6 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.Repository.RoleRepository;
@@ -31,11 +32,42 @@ public class UserServiceImpl implements UserService {
     private BCryptPasswordEncoder passwordEncoder;
 
     @Override
-    public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public User registerUser(User user) {
+        // Encode password
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userRepository.save(user);
     }
 
-   
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found with email: " + email);
+        }
+        return user;
+    }
+
+    @Override
+    public User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
+
+    @Override
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+
+    @Override
+    public User updateUser(User user) {
+        return userRepository.save(user);
+    }
+
     @Override
     public User save(UserRegistrationDto registration) {
         User user = new User();
@@ -43,23 +75,12 @@ public class UserServiceImpl implements UserService {
         user.setLastName(registration.getLastName());
         user.setEmail(registration.getEmail());
         user.setPassword(passwordEncoder.encode(registration.getPassword()));
-
-        String roleName = registration.getRole();
-        Role role = roleRepository.findByName(roleName);
-        if (role == null) {
-            role = new Role();
-            role.setName(roleName);
-            roleRepository.save(role);
-        }
-        user.setRoles(Arrays.asList(role));
-
         return userRepository.save(user);
     }
 
-
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(username);
         if (user == null) {
             throw new UsernameNotFoundException("Invalid username or password.");
         }
@@ -75,16 +96,6 @@ public class UserServiceImpl implements UserService {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public void deleteUser(Long id) {
-        User userToDelete = userRepository.findById(id).orElse(null);
-        if (userToDelete != null) {
-            userToDelete.setRoles(null);
-            userRepository.save(userToDelete);
-            userRepository.delete(userToDelete);
-        }
     }
 
     @Override
